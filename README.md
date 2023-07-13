@@ -1,7 +1,7 @@
 # ESPIcialFW
 Firmware for Enhanced VERA with ESP32 and SPI
 
-![VERA ESPIcial 3D Render](../Assets/VERA_ESPIcial_Render1.png)
+![VERA ESPIcial 3D Render](Assets/VERA_ESPIcial_Render1.png)
 
 ## Overview
 
@@ -13,19 +13,23 @@ Key features of the ESPIcial include:
 * Easy update interface for both ESP32 and FPGA through USB C connector
 * Supports all video and audio features of the original VERA
   * 640x480 @60Hz Resolution
-  * Multiple video output modes
+  * Video output
     * VGA
-	* 15KHz RGB with separate or composite sync
+	* 15KHz RGB with separate or composite sync ("Arcade" or "Amiga" output mode)
 	* 480i NTSC-compatible CVBS Color Composite
-	* 480i S-Video
+	* 480i S-Video (pads for S-Video header on bottom of board)
 	* "240p" non-interlaced NTSC compatible video
   * 4092 colors (4 bits per color)
   * Tiled and Bitmap graphics
   * Up to 128 Sprites
-* Backwards compatible with original VERA 8-bit bus interface for Homebrew Retro Computers
+  * Audio output
+      * Stereo output
+      * 16 voice programmable sound generator
+      * Stereo PCM digital audio output
+* Backwards compatible with original VERA bus interface for 8- or 16-bit Homebrew Retro Computers
 * SPI interface for adding video to modern microcontrollers
 * Power can be supplied through the USB type C connector or +5V on bus connector
-* Can operate as its own single-board computer
+* Can function as its own single-board computer
   * Onboard ESP32-S3-WROOM-1-N4R8 Module 
     * Dual 32-bit Xtensa LX7 Cores at 240 MHz
 	* Built-in 2.4GHz 802.11 b/g/n WiFi and Antenna
