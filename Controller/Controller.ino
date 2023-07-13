@@ -79,6 +79,16 @@ void spi_end() {
     //digitalWrite(CFG_SPI_SS, HIGH);
 }
 
+#define ENABLE_FPGA_CFG() do { \
+      digitalWrite(FPGA_SD_EN, 0); \
+      digitalWrite(FPGA_CFG_EN, 1); \
+  } while(0)
+
+#define ENABLE_FPGA_SD() do { \
+      digitalWrite(FPGA_CFG_EN, 0); \
+      digitalWrite(FPGA_SD_EN, 1); \
+  } while(0)
+
 // the setup function runs once when you press reset or power the board
 void setup() {
   pinMode(FPGA_CRESET_B, INPUT);
@@ -89,7 +99,7 @@ void setup() {
   digitalWrite(FPGA_CFG_EN, 0);
   
   pinMode(FPGA_SD_EN, OUTPUT);
-  digitalWrite(FPGA_SD_EN, 1);
+  digitalWrite(FPGA_SD_EN, 0);
   
   pinMode(SPI_BUS_EN, OUTPUT);
   digitalWrite(SPI_BUS_EN, 0);
@@ -113,13 +123,13 @@ void setup() {
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(ESP_BUILTIN_LED, OUTPUT);
 
-  digitalWrite(FPGA_CFG_EN, 1); // Enable communication between FPGA and Flash
+  ENABLE_FPGA_CFG();
   digitalWrite(ESP_FPGA_RESET, 0);
   digitalWrite(ESP_BUILTIN_LED, 1);
   delay(250);
   digitalWrite(ESP_BUILTIN_LED, 0);
   digitalWrite(ESP_FPGA_RESET, 1);
-
+  ENABLE_FPGA_SD();
 }
 
 #define SPI_BEGIN_MAGIC 0x96
@@ -135,6 +145,23 @@ uint16_t transfer_size;
 uint16_t bytes_transferred = 0;
 
 void loop() {
+  static uint8_t last_fpga_creset = 0;
+  static uint8_t fpga_configured = 0;
+
+  uint8_t cur_fpga_creset = digitalRead(FPGA_CRESET_B);
+
+  if (cur_fpga_creset == 0 && last_fpga_creset == 1)
+  {
+    // Reset was just asserted
+    // Make sure that FPGA SPI bus is connected to config flash
+    fpga_configured = 0;
+    ENABLE_FPGA_CFG();
+  } else if (cur_fpga_creset == 1 && fpga_configured == 0 && digitalRead(FPGA_CDONE) == 1) {
+      // FPGA has finished configuration
+      fpga_configured = 1;
+      ENABLE_FPGA_SD();
+  }
+
   while (Serial.available() > 0)
   {
     char serNext = Serial.read();
@@ -182,4 +209,5 @@ void loop() {
     }
   }
   digitalWrite(ESP_BUILTIN_LED, (millis() & 0x200) == 0 ? 0 : 1);
+  last_fpga_creset = cur_fpga_creset;
 }
