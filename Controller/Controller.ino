@@ -55,6 +55,8 @@ SPIClass* cfg_spi = NULL;
 SPIClass* sd_spi = NULL;
 
 static const int spiClk = 1000000; // 1 MHz
+uint8_t fpga_configured = 0;
+uint8_t last_fpga_creset = 0;
 
 void spi_begin() {
     pinMode(CFG_SPI_SCK, OUTPUT);
@@ -125,11 +127,10 @@ void setup() {
 
   ENABLE_FPGA_CFG();
   digitalWrite(ESP_FPGA_RESET, 0);
-  digitalWrite(ESP_BUILTIN_LED, 1);
-  delay(250);
-  digitalWrite(ESP_BUILTIN_LED, 0);
+  delay(20);
   digitalWrite(ESP_FPGA_RESET, 1);
-  ENABLE_FPGA_SD();
+  last_fpga_creset = 1;
+  fpga_configured = 0;
 }
 
 #define SPI_BEGIN_MAGIC 0x96
@@ -145,9 +146,6 @@ uint16_t transfer_size;
 uint16_t bytes_transferred = 0;
 
 void loop() {
-  static uint8_t last_fpga_creset = 0;
-  static uint8_t fpga_configured = 0;
-
   uint8_t cur_fpga_creset = digitalRead(FPGA_CRESET_B);
 
   if (cur_fpga_creset == 0 && last_fpga_creset == 1)
