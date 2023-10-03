@@ -59,6 +59,9 @@ uint8_t fpga_configured = 0;
 uint8_t last_fpga_creset = 0;
 
 void spi_begin() {
+    pinMode(FPGA_CDONE, OUTPUT);
+    digitalWrite(FPGA_CDONE, HIGH);
+
     pinMode(CFG_SPI_SCK, OUTPUT);
     pinMode(CFG_SPI_MISO, INPUT);
     pinMode(CFG_SPI_MOSI, OUTPUT);
@@ -70,6 +73,7 @@ void spi_begin() {
 
 void spi_end() {
     cfg_spi->end();
+    pinMode(FPGA_CDONE, INPUT);
     pinMode(CFG_SPI_SCK, INPUT);
     pinMode(CFG_SPI_MISO, INPUT);
     pinMode(CFG_SPI_MOSI, INPUT);
@@ -93,6 +97,7 @@ void spi_end() {
 
 // the setup function runs once when you press reset or power the board
 void setup() {
+  pinMode(FPGA_CDONE, INPUT);
   pinMode(FPGA_CRESET_B, INPUT);
   pinMode(ESP_FPGA_RESET, OUTPUT);
   digitalWrite(ESP_FPGA_RESET, 0);
@@ -121,7 +126,8 @@ void setup() {
   
   //pinMode(sd_spi->pinSS(), OUTPUT);
 
-  Serial.begin(115200);
+  //Serial.begin(115200);
+  Serial.begin(1000000);
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(ESP_BUILTIN_LED, OUTPUT);
 

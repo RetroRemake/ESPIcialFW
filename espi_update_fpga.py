@@ -79,7 +79,7 @@ page_2_fill = [0x80, 0x08, 0x73, 0x55]
 
 def program_flash_page(page_addr, write_data):
     if (page_addr & 0xfff) == 0:
-        print(f"Erasing sector 0x{page_addr:06X}...",end='' )
+        print(f"\nErasing sector 0x{page_addr:06X}...",end='' )
         if (flash_read_status() & 0x2) == 0:
             flash_write_enable()
 
@@ -90,7 +90,7 @@ def program_flash_page(page_addr, write_data):
     if (flash_read_status() & 0x2) == 0:
         flash_write_enable()
 
-    print(f"Writing page 0x{page_addr:06X}")
+    print(f"Writing page 0x{page_addr:06X}",end="\r")
     flash_program_page(page_addr, write_data)
     loop_cnt = flash_busy_wait()
     ser.flush()
@@ -107,20 +107,23 @@ def program_flash_page(page_addr, write_data):
     return read_data
     
 def program_flash(data):
-        print("Resetting SPI")
-        flash_reset()
-        ser.reset_input_buffer()
-        time.sleep(0.1)
-        res = flash_get_id()
-        print("Flash ID: "+res.hex());
+    print("Resetting SPI")
+    flash_reset()
+    ser.reset_input_buffer()
+    time.sleep(0.1)
+    res = flash_get_id()
+    print(f"Flash ID: {res}")
+    if res != b'\xff\xef@\x15':
+        print("Unrecognized flash part. Aborting.")
+        return False
 
-        page_addr = 0
-        for write_data in batched(data,256):
-            verification_data = program_flash_page(page_addr, write_data)
-            if verification_data is None:
-                break
-            page_addr += 256
-
+    page_addr = 0
+    for write_data in batched(data,256):
+        verification_data = program_flash_page(page_addr, write_data)
+        if verification_data is None:
+            break
+        page_addr += 256
+    return True
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -133,11 +136,12 @@ if __name__ == "__main__":
             data = f.read()
             print(f"Read {len(data)} bytes.")
             global ser
-            with serial.Serial(sys.argv[1], 115200) as ser:
+            # with serial.Serial(sys.argv[1], 115200*8) as ser:
+            with serial.Serial(sys.argv[1], 1000000) as ser:
                 spi_end()
                 spi_begin()
                 program_flash(data)
                 spi_end()
-            ser.write(b'\xf0')
+                ser.write(b'\xf0')
 
 
