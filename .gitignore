@@ -30,3 +30,10 @@
 *.exe
 *.out
 *.app
+
+Controller/build/*.*
+Controller/build/esp32.esp32.esp32s3/Controller.ino.bin
+Controller/build/esp32.esp32.esp32s3/Controller.ino.bootloader.bin
+Controller/build/esp32.esp32.esp32s3/Controller.ino.elf
+Controller/build/esp32.esp32.esp32s3/Controller.ino.map
+Controller/build/esp32.esp32.esp32s3/Controller.ino.partitions.bin

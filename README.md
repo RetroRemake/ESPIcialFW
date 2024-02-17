@@ -61,11 +61,26 @@ Once the ESP32 board is added to Arduino, use these settings for building the fi
 Press the checkmark button on the Arduino IDE to build the firmware. This may take a few
 minutes to complete.
 
-### Updating the ESP32 Firmware
+### Connecting the ESPIcial to your WiFi
+
+If no WiFi credentials are configured the ESPIcial will create a temporary AP for 60 seconds namend "X16Connect" and provide a captive portal. There you can select your WiFi AP and enter the password. Be aware that the portal is not encrypted, but the credentials will be, once connected.
+If you want to reset credentials or connect to a different network, create a file named "RESETWIFI" in the root folder of the SD card.
+At each reset the ESPIcial checks for this file and if found, delete credentials and create the temporary AP again.
+
+### Updating the ESP32 Firmware via OTA
+
+The ESP32 Firmware can be updated via WiFi by connecting to http://x16webdav:8080/update and uploading a compiled sketch in binary form.
+
+### Updating the FPGA Firmware via SD card
+
+You can place a file named VERA.BIN in the root folder of the SD card. At each reset the ESPIcial checks if this file exists and updates the FPGA.
+The LED is blinking quickly during this time.
+
+### Updating the ESP32 Firmware via Arduino IDE
 
 The ESP32 Firmware can be updated directly from the Arduino IDE by pressing the "Upload" button.
 
-### Updating the FPGA Firmware
+### Updating the FPGA Firmware via serial
 
 The ESP32 Firmware contains an interface that allows the FPGA bitstream to be updated over
 the USB C serial interface. A Python script, `espi_update_fpga.py` is included here to facilitate
