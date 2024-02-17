@@ -10,7 +10,10 @@ and retro enthusiasts to add to their own designs.
 
 Key features of the ESPIcial include:
 
-* Easy update interface for both ESP32 and FPGA through USB C connector
+* Easy WebDAV access to the SD card via WiFi
+* OTA capability for the ESP32 firmware via WiFi
+* Update via SD card for FPGA
+* Backup update interface for ESP32 and FPGA through USB C connector via serial
 * Supports all video and audio features of the original VERA
   * 640x480 @60Hz Resolution
   * Video output
