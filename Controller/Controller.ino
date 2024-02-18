@@ -25,10 +25,12 @@
 
 #include "ESPIcialWebDAV.h"
 
-#define VERSION     "VERA ESPIcial V1.0.0"
+#define VERSION     "VERA ESPIcial V1.0.1"
 #define HOSTNAME    "X16WebDAV"
 #define AP_NAME     "X16Connect"
 #define AP_PASSWORD "12345678"
+#define UP_NAME     "X16Update"
+#define UP_PASSWORD "12345678"
 #define RESET_FILE  "/RESETWIFI"
 #define VERA_FILE   "/VERA.BIN"
 
@@ -250,9 +252,10 @@ void setupWiFi() {
 void setupOTA() 
 {
     AsyncElegantOTA.setID(VERSION);
-    AsyncElegantOTA.begin(&server);    // Start ElegantOTA
+    AsyncElegantOTA.begin(&server);                           // Start ElegantOTA without username/password
+    //AsyncElegantOTA.begin(&server, UP_NAME, UP_PASSWORD);   // Start ElegantOTA with username/password
     server.begin();
-    Serial.println("HTTP server started");
+    Serial.println("Update server started");
 }
 
 //---------------------------------------------------------------------
