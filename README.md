@@ -74,13 +74,16 @@ Press the checkmark button on the Arduino IDE to build the firmware. This may ta
 
 Make sure the X16 is powered on and USB-C on the ESPIcial is NOT connected!
 If no WiFi credentials are configured the ESPIcial will create a temporary AP for 60 seconds namend "X16Connect" and provide a captive portal. There you can select your WiFi AP and enter the password. Be aware that the portal is not encrypted, but the credentials will be, once connected.
+
 If you want to reset credentials or connect to a different network, create a file named "RESETWIFI" in the root folder of the SD card.
 At each reset the ESPIcial checks for this file and if found, deletes credentials and creates the temporary AP again for 60 seconds.
 
 ### Using WebDAV
 
 Connect your webdav client to http://x16webdav. Mount share via file explorer on Windows 10+ or various options on Linux.
+
 This will give you direct access to the SD card via WiFi. Control of the SD card is shared with the X16. With every request via WebDAV the ESPIcial will get the SD card exclusively for at least 5 seconds. Each request within that time will extend access by 5 seconds. So 5 seconds after the last request control of the SD card is returned to the X16.
+
 While the ESPIcial has control over the SD card the X16 won't see the SD card and any file access will end with a "device not present" error.
 
 ### Updating the ESP32 Firmware via OTA
@@ -98,9 +101,7 @@ The ESP32 Firmware can be updated directly from the Arduino IDE by pressing the 
 
 ### Updating the FPGA Firmware via serial
 
-The ESP32 Firmware contains an interface that allows the FPGA bitstream to be updated over
-the USB C serial interface. A Python script, `espi_update_fpga.py` is included here to facilitate
-this. The script requires PySerial to communicate with the ESP32 firmware.
+The ESP32 Firmware contains an interface that allows the FPGA bitstream to be updated over the USB C serial interface. A Python script, `espi_update_fpga.py` is included here to facilitate this. The script requires PySerial to communicate with the ESP32 firmware.
 
 Obtain a VERA firmware and execute the following:
 
