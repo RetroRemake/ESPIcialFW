@@ -61,18 +61,31 @@ Once the ESP32 board is added to Arduino, use these settings for building the fi
 
 ### Building Firmware
 
-Press the checkmark button on the Arduino IDE to build the firmware. This may take a few
-minutes to complete.
+Install the following libraries:
+  * WiFiMulti_Generic
+  * WiFiManager
+  * MDNS_Generic
+  * ESPAsyncTCP
+  * ESPAsyncWebCerver
+  * AsyncElegantOTA
+Press the checkmark button on the Arduino IDE to build the firmware. This may take a few minutes to complete.
 
 ### Connecting the ESPIcial to your WiFi
 
+Make sure the X16 is powered on and USB-C on the ESPIcial is NOT connected!
 If no WiFi credentials are configured the ESPIcial will create a temporary AP for 60 seconds namend "X16Connect" and provide a captive portal. There you can select your WiFi AP and enter the password. Be aware that the portal is not encrypted, but the credentials will be, once connected.
 If you want to reset credentials or connect to a different network, create a file named "RESETWIFI" in the root folder of the SD card.
-At each reset the ESPIcial checks for this file and if found, delete credentials and create the temporary AP again.
+At each reset the ESPIcial checks for this file and if found, deletes credentials and creates the temporary AP again for 60 seconds.
+
+### Using WebDAV
+
+Connect your webdav client to http://x16webdav. Mount share via file explorer on Windows 10+ or various options on Linux.
+This will give you direct access to the SD card via WiFi. Control of the SD card is shared with the X16. With every request via WebDAV the ESPIcial will get the SD card exclusively for at least 5 seconds. Each request within that time will extend access by 5 seconds. So 5 seconds after the last request control of the SD card is returned to the X16.
+While the ESPIcial has control over the SD card the X16 won't see the SD card and any file access will end with a "device not present" error.
 
 ### Updating the ESP32 Firmware via OTA
 
-The ESP32 Firmware can be updated via WiFi by connecting to http://x16webdav:8080/update and uploading a compiled sketch in binary form.
+The ESP32 Firmware can be updated via WiFi by connecting to http://x16webdav:8080/update and uploading a sketch in compiled binary form.
 
 ### Updating the FPGA Firmware via SD card
 
@@ -93,4 +106,4 @@ Obtain a VERA firmware and execute the following:
 
 `python espi_update_fpga.py /dev/ttyS3 ~/vera.bin`
 
-Replace `/dev/ttyS3` with the path to the serial port device on your computer (could be `COM3` on Windows) and replace `~/vera.bin` with the path to the VERA bitstream.
+Replace `/dev/ttyS3` with the path to the serial port device on your computer (could be `COMx` on Windows) and replace `~/vera.bin` with the path to the VERA bitstream.
