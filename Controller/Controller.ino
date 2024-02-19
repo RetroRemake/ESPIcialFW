@@ -13,16 +13,26 @@
 #include <SD.h>
 #include <SPI.h>
 #include "flashmem.h"
+#include "esp_partition.h"
 
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <ESPmDNS.h>
+
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncElegantOTA.h>
+
 #include "ESPIcialWebDAV.h"
 
+#define VERSION     "VERA ESPIcial V1.0.1"
 #define HOSTNAME    "X16WebDAV"
 #define AP_NAME     "X16Connect"
 #define AP_PASSWORD "12345678"
+#define UP_NAME     "X16Update"
+#define UP_PASSWORD "12345678"
 #define RESET_FILE  "/RESETWIFI"
+#define VERA_FILE   "/VERA.BIN"
 
 #define ESP_BUILTIN_LED 2
 
@@ -56,6 +66,9 @@ void switchToESP();
 FS& gfs = SD;
 //WiFiServerSecure tcp(443); // ToDo: try https
 WiFiServer tcp(80);
+
+AsyncWebServer server(8080);
+
 ESPIcialWebDAV dav;
 uint32_t startTimeoutSD = 0;
 
@@ -226,6 +239,23 @@ void setupWiFi() {
         Serial.println("connected...yeey :)");
     }
  
+
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->send(200, "text/plain", VERSION);
+    });
+
+}
+
+//---------------------------------------------------------------------
+// Setup OTA update
+//---------------------------------------------------------------------
+void setupOTA() 
+{
+    AsyncElegantOTA.setID(VERSION);
+    AsyncElegantOTA.begin(&server);                           // Start ElegantOTA without username/password
+    //AsyncElegantOTA.begin(&server, UP_NAME, UP_PASSWORD);   // Start ElegantOTA with username/password
+    server.begin();
+    Serial.println("Update server started");
 }
 
 //---------------------------------------------------------------------
@@ -269,6 +299,15 @@ void setup() {
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(ESP_BUILTIN_LED, OUTPUT);
 
+  // setup WiFi
+  setupWiFi();
+
+  // setup SebDAV access
+  setupWebDav();
+
+  // setup SebDAV access
+  setupOTA();
+
   // show reset is done
   ENABLE_FPGA_CFG();
   digitalWrite(ESP_FPGA_RESET, 0);
@@ -289,8 +328,8 @@ void setup() {
 // variables for FPGA binary transfer
 uint8_t header_bytes_read = 0;
 uint8_t magic;
-uint16_t transfer_size;
-uint16_t bytes_transferred = 0;
+uint32_t transfer_size;
+uint32_t bytes_transferred = 0;
 
 //---------------------------------------------------------------------
 // switches SD card access to ESP, start timeout to switch back to FPGA
@@ -319,49 +358,10 @@ void switchToX16()
 }
 
 //---------------------------------------------------------------------
-// main loop
+// handle serial fpga upload
 //---------------------------------------------------------------------
-void loop() 
+void handleSerialUploadFPGA()
 {
-  uint8_t isX16SD = digitalRead(FPGA_SD_EN); // who is in control of the SD card?
-
-  if (fpga_configured)
-  {
-    dav.handleClient();
-
-    // switch back SD card to FPGA when timeout is due
-    if (startTimeoutSD
-     && millis()-startTimeoutSD > 5000
-     && !isX16SD)
-      switchToX16();
-  }
-  
-  uint8_t cur_fpga_creset = digitalRead(FPGA_CRESET_B);
-
-  if (cur_fpga_creset == 0 && last_fpga_creset == 1)
-  {
-    Serial.println("ENABLE_FPGA_CFG()");
-    // Reset was just asserted
-    // Make sure that FPGA SPI bus is connected to config flash
-    fpga_configured = 0;
-    ENABLE_FPGA_CFG();
-  } else if (cur_fpga_creset == 1 && fpga_configured == 0 && digitalRead(FPGA_CDONE) == 1) {
-      // FPGA has finished configuration, switch SD card access to SD card
-      fpga_configured = 1;
-
-      // setup WiFi
-      setupWiFi();
-
-      // setup SebDAV access
-      setupWebDav();
-
-      // give sd card control to X16
-      ENABLE_FPGA_SD();
-      switchToX16();
-      Serial.println("Init done");
-
-  }
-
   //
   // serial management, for uploading FPGA binary
   //
@@ -411,6 +411,141 @@ void loop()
       }
     }
   }
+}
+
+
+//---------------------------------------------------------------------
+// handle file based fpga upload. Checks for file "VERA.BIN"
+//---------------------------------------------------------------------
+void handleFileUploadFPGA()
+{
+  char buffer[256];
+
+  // checking for a vera binary
+  Serial.println("Checking for VERA update...");
+  switchToESP();
+
+  // no VERA.BIN file? then skip this
+  if (!gfs.exists(VERA_FILE))
+    return;
+
+  Serial.println("VERA.BIN found. Flashing to FPGA");
+
+  // setup flashing FPGA via SPI
+  digitalWrite(FPGA_CFG_EN, 0); // Disable communication between FPGA and Flash
+  spi_begin();
+
+  cfg_spi->beginTransaction(SPISettings(spiClk, MSBFIRST, SPI_MODE0));
+  digitalWrite(cfg_spi->pinSS(), LOW);
+
+  bytes_transferred = 0;
+
+  // open vera binary
+  switchToESP();
+  File f = gfs.open(VERA_FILE);
+
+  transfer_size = f.size();
+  sprintf(buffer, "Vera file size: %d Bytes", transfer_size);
+  Serial.println(buffer);
+
+  // transfer file
+  while(bytes_transferred < transfer_size)
+  {
+    uint8_t len = f.readBytes(buffer, 64);
+    if (len <= 0)
+    {
+      sprintf(buffer, "flashed %d", bytes_transferred);
+      Serial.println(buffer);
+      Serial.println("EOF?");
+      break;
+    }
+
+    for (int n=0; n<len; n++)
+    {
+      uint8_t r = cfg_spi->transfer(buffer[n]);
+    }
+    digitalWrite(ESP_BUILTIN_LED, (bytes_transferred & 0x200) == 0 ? 0 : 1);
+    bytes_transferred += len;
+
+    delay(10);
+    if (bytes_transferred % 1024 == 0)
+      Serial.print(".");
+  }
+
+  Serial.println("");
+  sprintf(buffer, "flashed %d", bytes_transferred);
+  Serial.println(buffer);
+
+  // cleanup
+  f.close();
+  gfs.remove(VERA_FILE);
+
+  // ending spi transfer
+  digitalWrite(cfg_spi->pinSS(), HIGH);
+  cfg_spi->endTransaction();
+
+  // reset VERA
+  Serial.println("Resetting FPGA");
+  digitalWrite(FPGA_CFG_EN, 1); // Enable communication between FPGA and Flash
+  digitalWrite(ESP_FPGA_RESET, 0);
+  digitalWrite(ESP_BUILTIN_LED, 1);
+  delay(250);
+  digitalWrite(ESP_BUILTIN_LED, 0);
+  digitalWrite(ESP_FPGA_RESET, 1);
+
+  digitalWrite(ESP_BUILTIN_LED, 0);
+  // Release SPI bus
+  spi_end();
+
+}
+
+//---------------------------------------------------------------------
+// main loop
+//---------------------------------------------------------------------
+void loop() 
+{
+  uint8_t isX16SD = digitalRead(FPGA_SD_EN); // who is in control of the SD card?
+  uint8_t cur_fpga_creset = digitalRead(FPGA_CRESET_B);
+
+  //if (fpga_configured)
+    dav.handleClient();
+
+  // switch back SD card to FPGA when timeout is due
+  if (startTimeoutSD
+    && millis()-startTimeoutSD > 5000
+    && !isX16SD)
+    switchToX16();
+  
+  if (cur_fpga_creset == 0 && last_fpga_creset == 1)
+  {
+    // Reset was just asserted
+    // Make sure that FPGA SPI bus is connected to config flash
+    fpga_configured = 0;
+    ENABLE_FPGA_CFG();
+  } else if (cur_fpga_creset == 1 && fpga_configured == 0 && digitalRead(FPGA_CDONE) == 1) {
+      // FPGA has finished configuration, switch SD card access to SD card
+      fpga_configured = 1;
+
+      /*// setup WiFi
+      setupWiFi();
+
+      // setup SebDAV access
+      setupWebDav();
+
+      // setup SebDAV access
+      setupOTA();
+*/
+      handleFileUploadFPGA();
+
+      // give sd card control to X16
+      switchToX16();
+      Serial.println("Init done");
+
+
+  }
+
+  // handle serial upload to FPGA
+  handleSerialUploadFPGA();
 
   // make led blink
   digitalWrite(ESP_BUILTIN_LED, (millis() & 0x200) == 0 ? 0 : 1);
